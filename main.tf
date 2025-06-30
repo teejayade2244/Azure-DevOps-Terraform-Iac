@@ -1,8 +1,8 @@
 module "resource_group" {
-  source   = "./Modules/ResourceGroup"
-  name     = "${local.resource_name_prefix}-${var.resource_group_name}"
-  location = var.resource_group_location
-  tags     = var.common_tags
+  source   = "./Modules/Resource-group"
+  resource_group_name = "${local.resource_name_prefix}-${var.resource_group_name}"
+  resource_group_location = var.resource_group_location
+  common_tags  = local.common_tags
 }
 
 module "vnet" {
