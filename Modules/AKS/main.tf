@@ -29,11 +29,9 @@ resource "azurerm_kubernetes_cluster" "aks_cluster" {
     min_count            = 2               
     max_count            = 5               
     enable_auto_scaling  = true  
-    # Taint the system node pool to prevent user workloads from running on it.
     node_labels = {
       "kubernetes.azure.com/mode" = "system"
     }
-    node_taints = ["CriticalAddonsOnly=true:NoSchedule"] 
   }
 
   private_cluster_enabled = true
