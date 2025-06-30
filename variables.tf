@@ -70,5 +70,10 @@ variable "aks_identity_name" {
   type        = string
 }
 
+variable "log_analytics_workspace_name" {
+  description = "The name of the Log Analytics workspace for AKS."
+  type        = string
+}
+
 
 
