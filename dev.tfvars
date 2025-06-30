@@ -15,6 +15,7 @@ common_tags = {
 dns_prefix_name     = "demo-aks"
 kubernetes_version  = "1.32.2"
 location            = "ukwest"
+log_analytics_workspace_name = "demo-aks-law"
 
 
 
