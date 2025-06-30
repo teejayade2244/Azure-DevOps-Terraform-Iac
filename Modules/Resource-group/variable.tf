@@ -11,8 +11,4 @@ variable "resource_group_location" {
 variable "common_tags" {
   description = "Common tags to apply to all resources."
   type        = map(string)
-  default     = {
-    environment = var.environment
-    region      = var.resource_group_location
-  }
 }
