@@ -26,9 +26,9 @@ resource "azurerm_kubernetes_cluster" "aks_cluster" {
     os_disk_size_gb      = 128               
     node_count           = 2                
     vnet_subnet_id       = var.aks_subnet_id
+    enable_auto_scaling  = true  
     min_count            = 2               
     max_count            = 5               
-    enable_auto_scaling  = true  
     node_labels = {
       "kubernetes.azure.com/mode" = "system"
     }
