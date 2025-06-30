@@ -75,5 +75,17 @@ variable "log_analytics_workspace_name" {
   type        = string
 }
 
+variable "nat_gateway_pip_name" {
+  description = "The name of the NAT Gateway Public IP."
+  type        = string
+}
+
+variable "nat_gateway_name" {
+  description = "The name of the NAT Gateway."
+  type        = string
+}
+
+
+
 
 

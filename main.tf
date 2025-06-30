@@ -47,3 +47,13 @@ module "aks" {
   azurerm_user_assigned_identity_aks_identity_id = module.identity.identity_id
   aks_subnet_id                 = module.vnet.aks_subnet_id
 }
+
+module "nat_gateway" {
+  source                = "./Modules/NAT"
+  nat_gateway_name      = var.nat_gateway_name
+  nat_gateway_pip_name  = var.nat_gateway_pip_name
+  location              = module.resource_group.location
+  resource_group_name   = module.resource_group.name
+  common_tags           = var.common_tags
+  aks_subnet_id         = module.vnet.aks_subnet_id
+}

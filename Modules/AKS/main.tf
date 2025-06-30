@@ -34,15 +34,19 @@ resource "azurerm_kubernetes_cluster" "aks_cluster" {
 
   private_cluster_enabled = true
   
+    network_profile {
+    network_plugin     = "azure"                     
+    network_policy     = "azure"                                                        
+    dns_service_ip     = "10.0.0.10"         
+    service_cidr       = "10.0.0.0/16"       
+    load_balancer_sku  = "Standard"         
 
-  # For modern AzureRM provider versions, use oms_agent block directly
+    outbound_type      = "loadBalancer"      
+  }
   oms_agent {
     log_analytics_workspace_id = azurerm_log_analytics_workspace.aks_log_workspace.id
   }
 
-  # Azure Policy Add-on
-  # Purpose: Extends Gatekeeper v3 to apply and enforce Azure Policy definitions on your AKS clusters.
-  # This helps ensure compliance with organizational standards and regulatory requirements.
   azure_policy_enabled = true
 
 }
