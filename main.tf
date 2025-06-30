@@ -43,5 +43,7 @@ module "aks" {
   kubernetes_version            = var.kubernetes_version
   common_tags                   = var.common_tags
   log_analytics_workspace_name  = var.log_analytics_workspace_name
+  user_assigned_identity_id     = module.identity.identity_id
   azurerm_user_assigned_identity_aks_identity_id = module.identity.identity_id
+  aks_subnet_id                 = module.vnet.aks_subnet_id
 }

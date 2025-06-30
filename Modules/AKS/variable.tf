@@ -38,3 +38,13 @@ variable "azurerm_user_assigned_identity_aks_identity_id" {
   description = "The ID of the User Assigned Identity created for AKS."
   type        = string
 }
+
+variable "user_assigned_identity_id" {
+  description = "The ID of the User Assigned Identity for AKS."
+  type        = string
+}
+
+variable "aks_subnet_id" {
+  description = "The ID of the subnet for the AKS node pool."
+  type        = string
+}

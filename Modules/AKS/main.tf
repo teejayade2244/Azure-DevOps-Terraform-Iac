@@ -9,15 +9,15 @@ resource "azurerm_log_analytics_workspace" "aks_log_workspace" {
 
 resource "azurerm_kubernetes_cluster" "aks_cluster" {
   name                = var.aks_cluster_name 
-  location            = azurerm_resource_group.aks_rg.location
-  resource_group_name = azurerm_resource_group.aks_rg.name
+  location            = var.location
+  resource_group_name = var.resource_group_name
   dns_prefix          = var.dns_prefix_name 
   tags                = var.common_tags
   kubernetes_version  = var.kubernetes_version 
 
   identity {
     type         = "UserAssigned"
-    identity_ids = [azurerm_user_assigned_identity.aks_identity.id]
+    identity_ids = [var.user_assigned_identity_id]
   }
 
   default_node_pool {
@@ -25,7 +25,7 @@ resource "azurerm_kubernetes_cluster" "aks_cluster" {
     vm_size              = "Standard_DS2_v2" 
     os_disk_size_gb      = 128               
     node_count           = 2                
-    vnet_subnet_id       = azurerm_subnet.aks_subnet.id 
+    vnet_subnet_id       = var.aks_subnet_id
     min_count            = 2               
     max_count            = 5               
     enable_auto_scaling  = true  
