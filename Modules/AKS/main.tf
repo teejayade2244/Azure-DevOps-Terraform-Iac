@@ -39,7 +39,7 @@ resource "azurerm_kubernetes_cluster" "aks_cluster" {
     network_policy     = "azure"                                                        
     dns_service_ip     = "10.0.0.10"         
     service_cidr       = "10.0.0.0/16"       
-    load_balancer_sku  = "Standard"         
+    load_balancer_sku  = "standard"         
 
     outbound_type      = "loadBalancer"      
   }
