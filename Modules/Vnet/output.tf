@@ -11,11 +11,9 @@ output "vnet_name" {
 }
 
 output "aks_subnet_id" {
-  description = "The ID of the AKS subnet"
-  value       = azurerm_subnet.aks_subnet.id
+  value = azurerm_subnet.AKS_subnet.id
 }
 
 output "aks_subnet_name" {
-  description = "The name of the AKS subnet"
-  value       = azurerm_subnet.aks_subnet.name
+  value = azurerm_subnet.AKS_subnet.name
 }
