@@ -17,3 +17,4 @@ kubernetes_version  = "1.32.2"
 location            = "ukwest"
 
 
+

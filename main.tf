@@ -33,3 +33,16 @@ module "acr" {
   resource_group_name = module.resource_group.name
   common_tags         = var.common_tags
 }
+
+module "aks" {
+  source                        = "./Modules/AKS"
+  aks_cluster_name              = var.aks_cluster_name
+  location                      = module.resource_group.location
+  resource_group_name           = module.resource_group.name
+  dns_prefix_name               = var.dns_prefix_name
+  kubernetes_version            = var.kubernetes_version
+  common_tags                   = var.common_tags
+  log_analytics_workspace_name  = var.log_analytics_workspace_name
+  azurerm_user_assigned_identity_aks_identity_id = module.identity.aks_identity_id
+
+}
