@@ -18,7 +18,7 @@ module "vnet" {
 }
 
 module "identity" {
-  source              = "./Modules/Identity"
+  source              = "./Modules/identities"
   aks_identity_name   = "${local.resource_name_prefix}-${var.aks_identity_name}"
   resource_group_name = module.resource_group.name
   resource_group_id   = module.resource_group.id  
