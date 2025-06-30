@@ -3,7 +3,7 @@ resource "azurerm_container_registry" "aks_acr" {
   location            = var.location
   tags                = var.common_tags
   resource_group_name = var.resource_group_name
-  sku                 = "standard"                              
+  sku                 = "Standard"                              
   admin_enabled       = false                                          
 }
 
