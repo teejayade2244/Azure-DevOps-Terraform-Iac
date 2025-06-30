@@ -1,8 +1,8 @@
 resource "azurerm_log_analytics_workspace" "aks_log_workspace" {
   name                = var.log_analytics_workspace_name
   tags                = var.common_tags
-  location            = azurerm_resource_group.aks_rg.location
-  resource_group_name = azurerm_resource_group.aks_rg.name
+  location            = var.location
+  resource_group_name = var.resource_group_name
   sku                 = "PerGB2018" 
   retention_in_days   = 30          
 }
