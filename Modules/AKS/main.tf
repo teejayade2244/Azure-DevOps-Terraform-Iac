@@ -20,18 +20,16 @@ resource "azurerm_kubernetes_cluster" "aks_cluster" {
     identity_ids = [var.user_assigned_identity_id]
   }
 
-  default_node_pool {
-    name                 = "systempool" 
-    vm_size              = "Standard_DS2_v2" 
-    os_disk_size_gb      = 128               
-    vnet_subnet_id       = var.aks_subnet_id
-    min_count            = 2               
-    max_count            = 5               
-    node_labels = {
-      "kubernetes.azure.com/mode" = "system"
-    }
+default_node_pool {
+  name                 = "systempool"
+  vm_size              = "Standard_DS2_v2"
+  os_disk_size_gb      = 128
+  vnet_subnet_id       = var.aks_subnet_id
+  node_count           = 2
+  node_labels = {
+    "kubernetes.azure.com/mode" = "system"
   }
-
+}
   private_cluster_enabled = true
   
     network_profile {
@@ -50,3 +48,4 @@ resource "azurerm_kubernetes_cluster" "aks_cluster" {
   azure_policy_enabled = true
 
 }
+
