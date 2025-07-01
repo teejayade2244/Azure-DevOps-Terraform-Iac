@@ -57,7 +57,7 @@ resource "azurerm_kubernetes_cluster_node_pool" "user_nodepool" {
   os_disk_size_gb       = 128
   node_count            = 2                
   vnet_subnet_id        = var.aks_subnet_id
-  enable_auto_scaling   = true
+  auto_scaling_enabled = true
   min_count             = 2
   max_count             = 10      
   node_labels = {
