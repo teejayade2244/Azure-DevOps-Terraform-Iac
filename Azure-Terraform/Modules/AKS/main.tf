@@ -55,11 +55,11 @@ resource "azurerm_kubernetes_cluster_node_pool" "user_nodepool" {
   kubernetes_cluster_id = azurerm_kubernetes_cluster.aks_cluster.id
   vm_size               = "Standard_D2s_v3" # or "Standard_D2s_v3"
   os_disk_size_gb       = 128
-  node_count            = 2                
+  node_count            = 1                
   vnet_subnet_id        = var.aks_subnet_id
   auto_scaling_enabled = true
-  min_count             = 2
-  max_count             = 10      
+  min_count             = 1
+  max_count             = 3      
   node_labels = {
     "app"  = "general"
     "mode" = "app"
