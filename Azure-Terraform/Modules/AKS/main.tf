@@ -53,7 +53,7 @@ network_profile {
 resource "azurerm_kubernetes_cluster_node_pool" "user_nodepool" {
   name                  = "userpool"
   kubernetes_cluster_id = azurerm_kubernetes_cluster.aks_cluster.id
-  vm_size               = "standard_a2_v2" 
+  vm_size               = "Standard_F1" # or "Standard_D2s_v3"
   os_disk_size_gb       = 128
   node_count            = 2                
   vnet_subnet_id        = var.aks_subnet_id
