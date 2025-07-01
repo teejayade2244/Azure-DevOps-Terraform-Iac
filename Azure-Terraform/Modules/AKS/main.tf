@@ -49,3 +49,19 @@ network_profile {
 
 }
 
+
+resource "azurerm_kubernetes_cluster_node_pool" "user_nodepool" {
+  name                  = "userpool"
+  kubernetes_cluster_id = azurerm_kubernetes_cluster.aks_cluster.id
+  vm_size               = "standard_a2_v2" 
+  os_disk_size_gb       = 128
+  node_count            = 2                
+  vnet_subnet_id        = var.aks_subnet_id
+  enable_auto_scaling   = true
+  min_count             = 2
+  max_count             = 10      
+  node_labels = {
+    "app"  = "general"
+    "mode" = "app"
+  }
+}
