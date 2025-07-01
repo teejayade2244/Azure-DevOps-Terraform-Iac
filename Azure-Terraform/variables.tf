@@ -85,11 +85,6 @@ variable "nat_gateway_name" {
   type        = string
 }
 
-variable "resource_group_name" {
-  description = "The name of the existing resource group."
-  type        = string
-}
-
 variable "storage_account_name" {
   description = "The name of the storage account."
   type        = string
