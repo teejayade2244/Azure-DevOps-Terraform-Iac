@@ -12,6 +12,6 @@ resource "azurerm_storage_account" "my_storage_account" {
 
 resource "azurerm_storage_container" "my_storage_account_container" {
   name                  = "ukwestdev-container"
-  storage_account_id    = azurerm_storage_account.myrg.id
+  storage_account_id    = azurerm_storage_account.my_storage_account.id
   container_access_type = "private"
 }
