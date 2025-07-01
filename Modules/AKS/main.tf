@@ -22,7 +22,7 @@ resource "azurerm_kubernetes_cluster" "aks_cluster" {
 
 default_node_pool {
   name                 = "systempool"
-  vm_size              = "Standard_DS2_v3" 
+  vm_size              = "standard_a2_v2" 
   os_disk_size_gb      = 128
   vnet_subnet_id       = var.aks_subnet_id
   node_count           = 2
