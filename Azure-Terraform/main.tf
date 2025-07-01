@@ -60,7 +60,7 @@ module "nat_gateway" {
 
 module "storage_account" {
   source                 = "./Modules/storage-account"
-  resource_group_name    = var.resource_group_name
+  resource_group_name   = module.resource_group.name
   storage_account_name   = var.storage_account_name
   resource_group_location = var.resource_group_location
   common_tags            = var.common_tags
