@@ -18,5 +18,7 @@ location            = "ukwest"
 log_analytics_workspace_name = "demo-aks-law"
 nat_gateway_name = "demo-nat-gateway"
 nat_gateway_pip_name = "demo-nat-gateway-pip"
+storage_account_name = "demo-storage-account"  # must be globally unique, lowercase, no dashes
+container_name      = "demo-tfstate"  
 
 
