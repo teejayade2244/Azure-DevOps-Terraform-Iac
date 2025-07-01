@@ -1,6 +1,6 @@
-data "azurerm_resource_group" "myrg" {
-  name = "ukwest-dev-demo-resource-group"
-}
+# data "azurerm_resource_group" "myrg" {
+#   name = "ukwest-dev-demo-resource-group"
+# }
 
 resource "azurerm_storage_account" "my_storage_account" {
   name                     = "ukwestdevstorageaccount"
