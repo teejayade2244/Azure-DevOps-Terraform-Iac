@@ -57,3 +57,13 @@ module "nat_gateway" {
   common_tags           = var.common_tags
   aks_subnet_id         = module.vnet.aks_subnet_id
 }
+
+module "storage_account" {
+  source                 = "./Modules/storage-account"
+  resource_group_name    = var.resource_group_name
+  storage_account_name   = var.storage_account_name
+  account_tier           = var.account_tier
+  account_replication_type = var.account_replication_type
+  container_name         = var.container_name
+  container_access_type  = var.container_access_type
+}
