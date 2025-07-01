@@ -27,7 +27,7 @@ default_node_pool {
   vnet_subnet_id       = var.aks_subnet_id
   node_count           = 2
   node_labels = {
-    "kubernetes.azure.com/mode" = "system"
+    "mode" = "system"
   }
 }
   private_cluster_enabled = true
