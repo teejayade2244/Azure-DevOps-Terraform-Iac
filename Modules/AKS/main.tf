@@ -32,15 +32,15 @@ default_node_pool {
 }
   private_cluster_enabled = true
   
-    network_profile {
-    network_plugin     = "azure"                     
-    network_policy     = "azure"                                                        
-    dns_service_ip     = "10.0.0.10"         
-    service_cidr       = "10.0.0.0/16"       
-    load_balancer_sku  = "standard"         
+network_profile {
+  network_plugin     = "azure"
+  network_policy     = "azure"
+  dns_service_ip     = "10.1.0.10"
+  service_cidr       = "10.1.0.0/16"
+  load_balancer_sku  = "standard"
+  outbound_type      = "loadBalancer"
+}
 
-    outbound_type      = "loadBalancer"      
-  }
   oms_agent {
     log_analytics_workspace_id = azurerm_log_analytics_workspace.aks_log_workspace.id
   }
