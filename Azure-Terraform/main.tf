@@ -105,11 +105,10 @@ resource "azurerm_application_gateway" "web_app_gateway" {
   location            = module.resource_group.location
   
 sku {
-  name     = "WAF"
+  name     = "WAF_Medium"
   tier     = "WAF"
   capacity = 2
 }
-
   gateway_ip_configuration {
     name      = "appgateway-ip-config"
     subnet_id = azurerm_subnet.app_gateway_subnet.id
