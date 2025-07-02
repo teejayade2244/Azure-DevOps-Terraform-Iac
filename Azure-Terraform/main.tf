@@ -69,3 +69,88 @@ module "storage_account" {
   container_name         = var.container_name
   container_access_type  = var.container_access_type
 }
+
+
+resource "azurerm_subnet" "app_gateway_subnet" {
+  name                 = "${local.resource_name_prefix}-app-gateway-subnet"
+  resource_group_name  = module.resource_group.name
+  virtual_network_name = module.vnet.vnet_name
+  address_prefixes     = ["10.0.3.0/24"]
+}
+
+resource "azurerm_application_gateway" "web_app_gateway" {
+  name                = "${local.resource_name_prefix}-app-gateway"
+  resource_group_name = module.resource_group.name
+  location            = module.resource_group.location
+  tags                = local.common_tags
+
+  sku {
+    name     = "WAF_v2"
+    tier     = "WAF_v2"
+    capacity = 2
+  }
+
+  gateway_ip_configuration {
+    name      = "appgateway-ip-config"
+    subnet_id = azurerm_subnet.app_gateway_subnet.id
+  }
+
+  frontend_ip_configuration {
+    name                           = "frontend-private-ip"
+    private_ip_address_allocation = "Dynamic" 
+    subnet_id                     = azurerm_subnet.app_gateway_subnet.id
+  }
+
+  frontend_port {
+    name = "http-port"
+    port = 80
+  }
+
+  backend_address_pool {
+    name        = "argocd-backend-pool"
+    ip_addresses = ["10.0.1.11"]  # NGINX internal LoadBalancer IP
+  }
+
+  probe {
+    name                = "health-probe"
+    protocol            = "Http"
+    path                = "/"
+    interval            = 30
+    timeout             = 30
+    unhealthy_threshold = 3
+    port                = 80
+  }
+
+  backend_http_settings {
+    name                  = "argocd-http-settings"
+    port                  = 80
+    protocol              = "Http"
+    cookie_based_affinity = "Disabled"
+    request_timeout       = 60
+    probe_name            = "health-probe"
+  }
+
+  http_listener {
+    name                           = "argocd-http-listener"
+    frontend_ip_configuration_name = "frontend-private-ip"
+    frontend_port_name             = "http-port"
+    protocol                       = "Http"
+  }
+
+  request_routing_rule {
+    name                       = "argocd-routing-rule"
+    rule_type                  = "Basic"
+    http_listener_name         = "argocd-http-listener"
+    backend_address_pool_name  = "argocd-backend-pool"
+    backend_http_settings_name = "argocd-http-settings"
+  }
+
+  waf_configuration {
+    enabled                     = true
+    firewall_mode               = "Prevention"
+    rule_set_type               = "OWASP"
+    rule_set_version            = "3.2"
+    file_upload_limit_mb        = 100
+    max_request_body_size_kb    = 128
+  }
+}

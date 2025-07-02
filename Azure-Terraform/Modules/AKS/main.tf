@@ -29,9 +29,12 @@ default_node_pool {
   node_labels = {
     "mode" = "system"
   }
+  
 }
   private_cluster_enabled = true
-  
+  oidc_issuer_enabled = true
+  azure_policy_enabled = true
+  workload_identity_enabled = true
 network_profile {
   network_plugin     = "azure"
   network_policy     = "azure"
@@ -41,12 +44,10 @@ network_profile {
   outbound_type      = "loadBalancer"
 }
 
+
   oms_agent {
     log_analytics_workspace_id = azurerm_log_analytics_workspace.aks_log_workspace.id
   }
-
-  azure_policy_enabled = true
-
 }
 
 
@@ -61,7 +62,10 @@ resource "azurerm_kubernetes_cluster_node_pool" "user_nodepool" {
   min_count             = 1
   max_count             = 3      
   node_labels = {
-    "app"  = "general"
-    "mode" = "app"
+    kubernetes.io/workload = "app"
   }
+
+  node_taints = [
+    "kubernetes.io/workload=app:NoSchedule"
+  ]
 }
