@@ -101,7 +101,7 @@ resource "azurerm_private_dns_a_record" "argocd_ui_a_record" {
 
 resource "azurerm_application_gateway" "web_app_gateway" {
   name                = "${local.resource_name_prefix}-app-gateway"
-  resource_group_name = module.resource_resource_group.name
+  resource_group_name = module.resource_group.name
   location            = module.resource_group.location
   tags                = local.common_tags # Ensure tags are included as per your original code
 
