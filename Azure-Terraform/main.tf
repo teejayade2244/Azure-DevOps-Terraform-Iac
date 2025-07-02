@@ -105,8 +105,8 @@ resource "azurerm_application_gateway" "web_app_gateway" {
   location            = module.resource_group.location
   
 sku {
-  name     = "Standard"      # ← Changed from Standard_v2
-  tier     = "Standard"      # ← Changed from Standard_v2
+  name     = "Standard_Small"  # ← Use specific size
+  tier     = "Standard"        # ← Tier stays as "Standard"
   capacity = 1
 }
   gateway_ip_configuration {
