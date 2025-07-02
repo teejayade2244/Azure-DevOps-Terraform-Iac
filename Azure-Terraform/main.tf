@@ -172,6 +172,7 @@ resource "azurerm_application_gateway" "web_app_gateway" {
     http_listener_name         = "argocd-https-listener"
     backend_address_pool_name  = "argocd-backend-pool"
     backend_http_settings_name = "argocd-https-settings"
+    priority                   = 100
   }
 
   waf_configuration {
