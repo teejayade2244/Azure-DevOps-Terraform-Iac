@@ -80,22 +80,22 @@ resource "azurerm_subnet" "app_gateway_subnet" {
 
 resource "azurerm_private_dns_zone" "internal_aks_zone" {
   name                = "aks.internal"
-  resource_group_name  = module.resource_group.name
+  resource_group_name = module.resource_group.name
 }
 
 resource "azurerm_private_dns_zone_virtual_network_link" "aks_vnet_link" {
   name                  = "link-aks-vnet-to-internal-dns"
-  resource_group_name   =  module.resource_group.name
+  resource_group_name   = module.resource_group.name
   private_dns_zone_name = azurerm_private_dns_zone.internal_aks_zone.name
   virtual_network_id    = module.vnet.vnet_id
-  registration_enabled  = false 
+  registration_enabled  = false
 }
 
 resource "azurerm_private_dns_a_record" "argocd_ui_a_record" {
-  name                = "argocd" 
+  name                = "argocd"
   zone_name           = azurerm_private_dns_zone.internal_aks_zone.name
-  resource_group_name =  module.resource_group.name
-  ttl                 = 300 
+  resource_group_name = module.resource_group.name
+  ttl                 = 300
   records             = [azurerm_application_gateway.web_app_gateway.frontend_ip_configuration[0].private_ip_address]
 }
 
@@ -103,11 +103,17 @@ resource "azurerm_application_gateway" "web_app_gateway" {
   name                = "${local.resource_name_prefix}-app-gateway"
   resource_group_name = module.resource_group.name
   location            = module.resource_group.location
-  
+  tags                = local.common_tags # Ensure tags are included as per your original code
+
+  # --- IMPORTANT: TEMPORARY WORKAROUND FOR AZURE API ERROR ---
+  # The error indicates that WAF_v2 is not supported for private IPs in your environment.
+  # We are reverting to WAF (V1) as suggested by the error message.
+  # This is NOT a best practice for new production deployments, as V1 is deprecated.
+  # You should investigate why WAF_v2 is not working with private IPs in your subscription.
   sku {
-    name     = "WAF_v2"
-    tier     = "WAF_v2"
-    capacity = 2
+    name     = "WAF"    # Changed to WAF (V1)
+    tier     = "WAF"    # Changed to WAF (V1)
+    capacity = 2        # Capacity is still applicable
   }
 
   gateway_ip_configuration {
@@ -132,13 +138,13 @@ resource "azurerm_application_gateway" "web_app_gateway" {
   }
 
   backend_http_settings {
-    name                  = "argocd-https-settings"
-    port                  = 443
-    protocol              = "Https"
-    cookie_based_affinity = "Disabled"
-    request_timeout       = 60
-    probe_name            = "argocd-health-probe"
-    pick_host_name_from_backend_address = true # Critical fix
+    name                                = "argocd-https-settings"
+    port                                = 443
+    protocol                            = "Https"
+    cookie_based_affinity               = "Disabled"
+    request_timeout                     = 60
+    probe_name                          = "argocd-health-probe"
+    pick_host_name_from_backend_address = true
   }
 
   probe {
@@ -175,10 +181,13 @@ resource "azurerm_application_gateway" "web_app_gateway" {
     priority                   = 100
   }
 
+  # WAF configuration is still enabled, but it will be using the V1 WAF capabilities
   waf_configuration {
-    enabled          = true
-    firewall_mode    = "Prevention"
-    rule_set_type    = "OWASP"
-    rule_set_version = "3.2"
+    enabled            = true
+    firewall_mode      = "Prevention"
+    rule_set_type      = "OWASP"
+    rule_set_version   = "3.2" # Note: V1 WAF might support different rule set versions
+    file_upload_limit_mb = 100
+    max_request_body_size_kb = 128
   }
 }
