@@ -104,11 +104,11 @@ resource "azurerm_application_gateway" "web_app_gateway" {
   resource_group_name = module.resource_group.name
   location            = module.resource_group.location
   
-  sku {
-    name     = "WAF_v2"
-    tier     = "WAF_v2"
-    capacity = 2
-  }
+sku {
+  name     = "WAF"
+  tier     = "WAF"
+  capacity = 2
+}
 
   gateway_ip_configuration {
     name      = "appgateway-ip-config"
