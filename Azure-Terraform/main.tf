@@ -135,7 +135,7 @@ resource "azurerm_application_gateway" "web_app_gateway" {
     frontend_ip_configuration_name = "frontend-private-ip"
     frontend_port_name             = "http-port"
     protocol                       = "Http"
-    host_names                     = ["argocd.internal"]
+    host_names                     = ["*"]
   }
 
   request_routing_rule {
