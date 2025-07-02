@@ -78,6 +78,15 @@ resource "azurerm_subnet" "app_gateway_subnet" {
   address_prefixes     = ["10.0.3.0/24"]
 }
 
+resource "azurerm_public_ip" "app_gateway_public_ip" {
+  name                = "${local.resource_name_prefix}-app-gateway-pip"
+  resource_group_name = module.resource_group.name
+  location            = module.resource_group.location
+  allocation_method   = "Static"
+  sku                 = "Standard"
+  tags                = local.common_tags
+}
+
 resource "azurerm_application_gateway" "web_app_gateway" {
   name                = "${local.resource_name_prefix}-app-gateway"
   resource_group_name = module.resource_group.name
@@ -93,6 +102,11 @@ resource "azurerm_application_gateway" "web_app_gateway" {
   gateway_ip_configuration {
     name      = "appgateway-ip-config"
     subnet_id = azurerm_subnet.app_gateway_subnet.id
+  }
+
+  frontend_ip_configuration {
+    name                 = "frontend-public-ip"
+    public_ip_address_id = azurerm_public_ip.app_gateway_public_ip.id
   }
 
   frontend_ip_configuration {
@@ -133,7 +147,7 @@ resource "azurerm_application_gateway" "web_app_gateway" {
 
   http_listener {
     name                           = "argocd-http-listener"
-    frontend_ip_configuration_name = "frontend-private-ip"
+    frontend_ip_configuration_name = "frontend-public-ip"
     frontend_port_name             = "http-port"
     protocol                       = "Http"
   }
