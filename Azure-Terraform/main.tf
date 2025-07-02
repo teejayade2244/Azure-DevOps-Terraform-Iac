@@ -104,11 +104,12 @@ resource "azurerm_application_gateway" "web_app_gateway" {
   resource_group_name = module.resource_group.name
   location            = module.resource_group.location
   
-sku {
-  name     = "Standard_Small"  # ← Use specific size
-  tier     = "Standard"        # ← Tier stays as "Standard"
-  capacity = 1
-}
+  sku {
+    name     = "WAF_v2"
+    tier     = "WAF_v2"
+    capacity = 2
+  }
+
   gateway_ip_configuration {
     name      = "appgateway-ip-config"
     subnet_id = azurerm_subnet.app_gateway_subnet.id
@@ -172,5 +173,12 @@ sku {
     backend_address_pool_name  = "argocd-backend-pool"
     backend_http_settings_name = "argocd-https-settings"
     priority                   = 100
+  }
+
+  waf_configuration {
+    enabled          = true
+    firewall_mode    = "Prevention"
+    rule_set_type    = "OWASP"
+    rule_set_version = "3.2"
   }
 }
