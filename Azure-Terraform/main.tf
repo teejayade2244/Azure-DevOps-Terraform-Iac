@@ -71,121 +71,121 @@ module "storage_account" {
 }
 
 
-resource "azurerm_subnet" "app_gateway_subnet" {
-  name                 = "${local.resource_name_prefix}-app-gateway-subnet"
-  resource_group_name  = module.resource_group.name
-  virtual_network_name = module.vnet.vnet_name
-  address_prefixes     = ["10.0.3.0/24"]
-}
+# resource "azurerm_subnet" "app_gateway_subnet" {
+#   name                 = "${local.resource_name_prefix}-app-gateway-subnet"
+#   resource_group_name  = module.resource_group.name
+#   virtual_network_name = module.vnet.vnet_name
+#   address_prefixes     = ["10.0.3.0/24"]
+# }
 
-resource "azurerm_private_dns_zone" "internal_aks_zone" {
-  name                = "aks.internal"
-  resource_group_name = module.resource_group.name
-}
+# resource "azurerm_private_dns_zone" "internal_aks_zone" {
+#   name                = "aks.internal"
+#   resource_group_name = module.resource_group.name
+# }
 
-resource "azurerm_private_dns_zone_virtual_network_link" "aks_vnet_link" {
-  name                  = "link-aks-vnet-to-internal-dns"
-  resource_group_name   = module.resource_group.name
-  private_dns_zone_name = azurerm_private_dns_zone.internal_aks_zone.name
-  virtual_network_id    = module.vnet.vnet_id
-  registration_enabled  = false
-}
+# resource "azurerm_private_dns_zone_virtual_network_link" "aks_vnet_link" {
+#   name                  = "link-aks-vnet-to-internal-dns"
+#   resource_group_name   = module.resource_group.name
+#   private_dns_zone_name = azurerm_private_dns_zone.internal_aks_zone.name
+#   virtual_network_id    = module.vnet.vnet_id
+#   registration_enabled  = false
+# }
 
-resource "azurerm_private_dns_a_record" "argocd_ui_a_record" {
-  name                = "argocd"
-  zone_name           = azurerm_private_dns_zone.internal_aks_zone.name
-  resource_group_name = module.resource_group.name
-  ttl                 = 300
-  records             = [azurerm_application_gateway.web_app_gateway.frontend_ip_configuration[0].private_ip_address]
-}
+# resource "azurerm_private_dns_a_record" "argocd_ui_a_record" {
+#   name                = "argocd"
+#   zone_name           = azurerm_private_dns_zone.internal_aks_zone.name
+#   resource_group_name = module.resource_group.name
+#   ttl                 = 300
+#   records             = [azurerm_application_gateway.web_app_gateway.frontend_ip_configuration[0].private_ip_address]
+# }
 
-resource "azurerm_application_gateway" "web_app_gateway" {
-  name                = "${local.resource_name_prefix}-app-gateway"
-  resource_group_name = module.resource_group.name
-  location            = module.resource_group.location
-  tags                = local.common_tags # Ensure tags are included as per your original code
+# resource "azurerm_application_gateway" "web_app_gateway" {
+#   name                = "${local.resource_name_prefix}-app-gateway"
+#   resource_group_name = module.resource_group.name
+#   location            = module.resource_group.location
+#   tags                = local.common_tags # Ensure tags are included as per your original code
 
-  # --- Using WAF_v2 SKU as required by Azure API ---
-  # This is the recommended and supported SKU for production,
-  # and it fully supports private frontend IPs.
-  sku {
-    name     = "WAF_v2" # Using the supported WAF_v2 SKU
-    tier     = "WAF_v2" # Using the supported WAF_v2 tier
-    capacity = 2        # Capacity for V2 SKUs
-  }
+#   # --- Using WAF_v2 SKU as required by Azure API ---
+#   # This is the recommended and supported SKU for production,
+#   # and it fully supports private frontend IPs.
+#   sku {
+#     name     = "WAF_v2" # Using the supported WAF_v2 SKU
+#     tier     = "WAF_v2" # Using the supported WAF_v2 tier
+#     capacity = 2        # Capacity for V2 SKUs
+#   }
 
-  gateway_ip_configuration {
-    name      = "appgateway-ip-config"
-    subnet_id = azurerm_subnet.app_gateway_subnet.id
-  }
+#   gateway_ip_configuration {
+#     name      = "appgateway-ip-config"
+#     subnet_id = azurerm_subnet.app_gateway_subnet.id
+#   }
 
-  frontend_ip_configuration {
-    name                 = "frontend-private-ip"
-    private_ip_address   = "10.0.3.100" # Explicit static IP
-    subnet_id            = azurerm_subnet.app_gateway_subnet.id
-  }
+#   frontend_ip_configuration {
+#     name                 = "frontend-private-ip"
+#     private_ip_address   = "10.0.3.100" # Explicit static IP
+#     subnet_id            = azurerm_subnet.app_gateway_subnet.id
+#   }
 
-  frontend_port {
-    name = "https-port"
-    port = 443
-  }
+#   frontend_port {
+#     name = "https-port"
+#     port = 443
+#   }
 
-  backend_address_pool {
-    name  = "argocd-backend-pool"
-    fqdns = ["argocd-server.argocd.svc.cluster.local"] # Point to ArgoCD service
-  }
+#   backend_address_pool {
+#     name  = "argocd-backend-pool"
+#     fqdns = ["argocd-server.argocd.svc.cluster.local"] # Point to ArgoCD service
+#   }
 
-  backend_http_settings {
-    name                                = "argocd-https-settings"
-    port                                = 443
-    protocol                            = "Https"
-    cookie_based_affinity               = "Disabled"
-    request_timeout                     = 60
-    probe_name                          = "argocd-health-probe"
-    pick_host_name_from_backend_address = true
-  }
+#   backend_http_settings {
+#     name                                = "argocd-https-settings"
+#     port                                = 443
+#     protocol                            = "Https"
+#     cookie_based_affinity               = "Disabled"
+#     request_timeout                     = 60
+#     probe_name                          = "argocd-health-probe"
+#     pick_host_name_from_backend_address = true
+#   }
 
-  probe {
-    name                = "argocd-health-probe"
-    protocol            = "Https"
-    host                = "argocd-server.argocd.svc.cluster.local"
-    path                = "/healthz"
-    interval            = 30
-    timeout             = 30
-    unhealthy_threshold = 3
-  }
+#   probe {
+#     name                = "argocd-health-probe"
+#     protocol            = "Https"
+#     host                = "argocd-server.argocd.svc.cluster.local"
+#     path                = "/healthz"
+#     interval            = 30
+#     timeout             = 30
+#     unhealthy_threshold = 3
+#   }
 
-  ssl_certificate {
-    name     = "argocd-cert"
-    data     = filebase64("./certs/argocd.pfx")
-    password = "tope" # Replace with your actual certificate password
-  }
+#   ssl_certificate {
+#     name     = "argocd-cert"
+#     data     = filebase64("./certs/argocd.pfx")
+#     password = "tope" # Replace with your actual certificate password
+#   }
 
-  http_listener {
-    name                           = "argocd-https-listener"
-    frontend_ip_configuration_name = "frontend-private-ip"
-    frontend_port_name             = "https-port"
-    protocol                       = "Https"
-    ssl_certificate_name           = "argocd-cert"
-    host_names                     = ["argocd.aks.internal"] # Match your DNS record
-  }
+#   http_listener {
+#     name                           = "argocd-https-listener"
+#     frontend_ip_configuration_name = "frontend-private-ip"
+#     frontend_port_name             = "https-port"
+#     protocol                       = "Https"
+#     ssl_certificate_name           = "argocd-cert"
+#     host_names                     = ["argocd.aks.internal"] # Match your DNS record
+#   }
 
-  request_routing_rule {
-    name                       = "argocd-routing-rule"
-    rule_type                  = "Basic"
-    http_listener_name         = "argocd-https-listener"
-    backend_address_pool_name  = "argocd-backend-pool"
-    backend_http_settings_name = "argocd-https-settings"
-    priority                   = 100
-  }
+#   request_routing_rule {
+#     name                       = "argocd-routing-rule"
+#     rule_type                  = "Basic"
+#     http_listener_name         = "argocd-https-listener"
+#     backend_address_pool_name  = "argocd-backend-pool"
+#     backend_http_settings_name = "argocd-https-settings"
+#     priority                   = 100
+#   }
 
-  # WAF configuration is fully supported and enabled with WAF_v2
-  waf_configuration {
-    enabled            = true
-    firewall_mode      = "Prevention"
-    rule_set_type      = "OWASP"
-    rule_set_version   = "3.2" # Use the latest stable OWASP CRS version
-    file_upload_limit_mb = 100
-    max_request_body_size_kb = 128
-  }
-}
+#   # WAF configuration is fully supported and enabled with WAF_v2
+#   waf_configuration {
+#     enabled            = true
+#     firewall_mode      = "Prevention"
+#     rule_set_type      = "OWASP"
+#     rule_set_version   = "3.2" # Use the latest stable OWASP CRS version
+#     file_upload_limit_mb = 100
+#     max_request_body_size_kb = 128
+#   }
+# }
