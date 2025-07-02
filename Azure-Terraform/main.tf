@@ -96,8 +96,8 @@ resource "azurerm_application_gateway" "web_app_gateway" {
   }
 
   frontend_ip_configuration {
-    name                           = "frontend-private-ip"
-    private_ip_address_allocation = "Dynamic" 
+    name                          = "frontend-private-ip"
+    private_ip_address_allocation = "Dynamic"
     subnet_id                     = azurerm_subnet.app_gateway_subnet.id
   }
 
@@ -107,18 +107,19 @@ resource "azurerm_application_gateway" "web_app_gateway" {
   }
 
   backend_address_pool {
-    name        = "argocd-backend-pool"
+    name         = "argocd-backend-pool"
     ip_addresses = ["10.0.1.11"]  # NGINX internal LoadBalancer IP
   }
 
   probe {
-    name                = "health-probe"
-    protocol            = "Http"
-    path                = "/"
-    interval            = 30
-    timeout             = 30
-    unhealthy_threshold = 3
-    port                = 80
+    name                                      = "health-probe"
+    protocol                                  = "Http"
+    path                                      = "/"
+    interval                                  = 30
+    timeout                                   = 30
+    unhealthy_threshold                       = 3
+    port                                      = 80
+    pick_host_name_from_backend_http_settings = true
   }
 
   backend_http_settings {
@@ -135,7 +136,6 @@ resource "azurerm_application_gateway" "web_app_gateway" {
     frontend_ip_configuration_name = "frontend-private-ip"
     frontend_port_name             = "http-port"
     protocol                       = "Http"
-    host_names                     = ["*"]
   }
 
   request_routing_rule {
@@ -144,14 +144,15 @@ resource "azurerm_application_gateway" "web_app_gateway" {
     http_listener_name         = "argocd-http-listener"
     backend_address_pool_name  = "argocd-backend-pool"
     backend_http_settings_name = "argocd-http-settings"
+    priority                   = 100
   }
 
   waf_configuration {
-    enabled                     = true
-    firewall_mode               = "Prevention"
-    rule_set_type               = "OWASP"
-    rule_set_version            = "3.2"
-    file_upload_limit_mb        = 100
-    max_request_body_size_kb    = 128
+    enabled                  = true
+    firewall_mode            = "Prevention"
+    rule_set_type            = "OWASP"
+    rule_set_version         = "3.2"
+    file_upload_limit_mb     = 100
+    max_request_body_size_kb = 128
   }
 }
