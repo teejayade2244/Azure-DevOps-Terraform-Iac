@@ -103,77 +103,81 @@ resource "azurerm_application_gateway" "web_app_gateway" {
   name                = "${local.resource_name_prefix}-app-gateway"
   resource_group_name = module.resource_group.name
   location            = module.resource_group.location
-  tags                = local.common_tags
+  
   sku {
     name     = "WAF_v2"
     tier     = "WAF_v2"
-    capacity = 2 # Minimum capacity for production, adjust based on traffic.
+    capacity = 2
   }
 
-  # Gateway IP Configuration
   gateway_ip_configuration {
     name      = "appgateway-ip-config"
     subnet_id = azurerm_subnet.app_gateway_subnet.id
   }
 
   frontend_ip_configuration {
-    name                          = "frontend-private-ip"
-    private_ip_address_allocation = "Dynamic"
-    subnet_id                     = azurerm_subnet.app_gateway_subnet.id
+    name                 = "frontend-private-ip"
+    private_ip_address   = "10.0.3.100" # Explicit static IP
+    subnet_id            = azurerm_subnet.app_gateway_subnet.id
   }
 
   frontend_port {
-    name = "http-port" # Changed name to reflect HTTP
-    port = 80           # Changed to HTTP port
+    name = "https-port"
+    port = 443
   }
 
   backend_address_pool {
-    name         = "argocd-backend-pool"
-    ip_addresses = ["10.0.1.11"] # NGINX internal LoadBalancer IP
-  }
-
-  probe {
-    name                = "health-probe"
-    protocol            = "Http" # Probe NGINX Ingress Controller on HTTP
-    path                = "/healthz" # Common NGINX Ingress health check path, or adjust if your NGINX has a specific one
-    interval            = 30
-    timeout             = 30
-    unhealthy_threshold = 3
-    port                = 80 # Probe NGINX Ingress Controller on its HTTP port
+    name  = "argocd-backend-pool"
+    fqdns = ["argocd-server.argocd.svc.cluster.local"] # Point to ArgoCD service
   }
 
   backend_http_settings {
-    name                  = "argocd-http-settings"
-    port                  = 80 # App Gateway sends HTTP to NGINX Ingress Controller
-    protocol              = "Http" # App Gateway sends HTTP to NGINX Ingress Controller
+    name                  = "argocd-https-settings"
+    port                  = 443
+    protocol              = "Https"
     cookie_based_affinity = "Disabled"
     request_timeout       = 60
-    probe_name            = "health-probe"
+    probe_name            = "argocd-health-probe"
+    pick_host_name_from_backend_address = true # Critical fix
+  }
+
+  probe {
+    name                = "argocd-health-probe"
+    protocol            = "Https"
+    host                = "argocd-server.argocd.svc.cluster.local"
+    path                = "/healthz"
+    interval            = 30
+    timeout             = 30
+    unhealthy_threshold = 3
+  }
+
+  ssl_certificate {
+    name     = "argocd-cert"
+    data     = filebase64("./certs/argocd.pfx")
+    password = tope
   }
 
   http_listener {
-    name                           = "argocd-http-listener" # Changed name to reflect HTTP
+    name                           = "argocd-https-listener"
     frontend_ip_configuration_name = "frontend-private-ip"
-    frontend_port_name             = "http-port"            # Use the HTTP port
-    protocol                       = "Http"                 # Listen for HTTP
-    host_names                     = ["argocd.aks.internal"] # Use the internal hostname
+    frontend_port_name             = "https-port"
+    protocol                       = "Https"
+    ssl_certificate_name           = "argocd-cert"
+    host_names                     = ["argocd.aks.internal"] # Match your DNS record
   }
 
   request_routing_rule {
     name                       = "argocd-routing-rule"
     rule_type                  = "Basic"
-    http_listener_name         = "argocd-http-listener" # Use the HTTP listener
+    http_listener_name         = "argocd-https-listener"
     backend_address_pool_name  = "argocd-backend-pool"
-    backend_http_settings_name = "argocd-http-settings"
+    backend_http_settings_name = "argocd-https-settings"
   }
 
-  # Web Application Firewall Configuration (No changes, remains good practice)
   waf_configuration {
-    enabled            = true
-    firewall_mode      = "Prevention"
-    rule_set_type      = "OWASP"
-    rule_set_version   = "3.2"
-    file_upload_limit_mb = 100
-    max_request_body_size_kb = 128
+    enabled          = true
+    firewall_mode    = "Prevention"
+    rule_set_type    = "OWASP"
+    rule_set_version = "3.2"
   }
 }
