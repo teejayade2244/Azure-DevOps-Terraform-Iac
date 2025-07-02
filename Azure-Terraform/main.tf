@@ -154,7 +154,7 @@ resource "azurerm_application_gateway" "web_app_gateway" {
   ssl_certificate {
     name     = "argocd-cert"
     data     = filebase64("./certs/argocd.pfx")
-    password = tope
+    password = "tope" # Replace with your actual certificate password
   }
 
   http_listener {
