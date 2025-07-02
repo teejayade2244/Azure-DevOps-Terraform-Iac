@@ -142,15 +142,14 @@ resource "azurerm_application_gateway" "web_app_gateway" {
     port                = 80 # Probe NGINX Ingress Controller on its HTTP port
   }
 
-backend_http_settings {
-  name                           = "argocd-http-settings"
-  port                           = 80
-  protocol                       = "Http"
-  cookie_based_affinity           = "Disabled"
-  request_timeout                 = 60
-  probe_name                      = "health-probe"
-  host = "argocd.aks.internal"
-}
+  backend_http_settings {
+    name                  = "argocd-http-settings"
+    port                  = 80 # App Gateway sends HTTP to NGINX Ingress Controller
+    protocol              = "Http" # App Gateway sends HTTP to NGINX Ingress Controller
+    cookie_based_affinity = "Disabled"
+    request_timeout       = 60
+    probe_name            = "health-probe"
+  }
 
   http_listener {
     name                           = "argocd-http-listener" # Changed name to reflect HTTP
