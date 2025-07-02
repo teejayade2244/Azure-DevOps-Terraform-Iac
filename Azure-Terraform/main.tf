@@ -105,15 +105,13 @@ resource "azurerm_application_gateway" "web_app_gateway" {
   location            = module.resource_group.location
   tags                = local.common_tags # Ensure tags are included as per your original code
 
-  # --- IMPORTANT: TEMPORARY WORKAROUND FOR AZURE API ERROR ---
-  # The error indicates that WAF_v2 is not supported for private IPs in your environment.
-  # We are reverting to WAF (V1) as suggested by the error message.
-  # This is NOT a best practice for new production deployments, as V1 is deprecated.
-  # You should investigate why WAF_v2 is not working with private IPs in your subscription.
+  # --- Using WAF_v2 SKU as required by Azure API ---
+  # This is the recommended and supported SKU for production,
+  # and it fully supports private frontend IPs.
   sku {
-    name     = "WAF_Medium" # Changed to a specific V1 WAF size as required by the error
-    tier     = "WAF"        # Tier stays as "WAF" (V1)
-    capacity = 2            # Capacity is still applicable
+    name     = "WAF_v2" # Using the supported WAF_v2 SKU
+    tier     = "WAF_v2" # Using the supported WAF_v2 tier
+    capacity = 2        # Capacity for V2 SKUs
   }
 
   gateway_ip_configuration {
@@ -181,12 +179,12 @@ resource "azurerm_application_gateway" "web_app_gateway" {
     priority                   = 100
   }
 
-  # WAF configuration is still enabled, but it will be using the V1 WAF capabilities
+  # WAF configuration is fully supported and enabled with WAF_v2
   waf_configuration {
     enabled            = true
     firewall_mode      = "Prevention"
     rule_set_type      = "OWASP"
-    rule_set_version   = "3.2" # Note: V1 WAF might support different rule set versions
+    rule_set_version   = "3.2" # Use the latest stable OWASP CRS version
     file_upload_limit_mb = 100
     max_request_body_size_kb = 128
   }
