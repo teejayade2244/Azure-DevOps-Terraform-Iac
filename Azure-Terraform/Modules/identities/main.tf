@@ -23,3 +23,15 @@ resource "azurerm_role_assignment" "aks_identity_acr_pull" {
   role_definition_name = "AcrPull"
   principal_id         = azurerm_user_assigned_identity.aks_identity.principal_id
 }
+
+# Get the node resource group data
+data "azurerm_resource_group" "aks_node_rg" {
+  name = "MC_ukwest-dev-demo-resource-group_demo-aks-cluster_ukwest"
+}
+
+# Assign Network Contributor role to the node resource group
+resource "azurerm_role_assignment" "aks_identity_node_rg_network_contributor" {
+  scope                = data.azurerm_resource_group.aks_node_rg.id
+  role_definition_name = "Network Contributor"
+  principal_id         = azurerm_user_assigned_identity.aks_identity.principal_id
+}
