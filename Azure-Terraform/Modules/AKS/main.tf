@@ -25,7 +25,7 @@ default_node_pool {
   vm_size              = "standard_a2_v2" 
   os_disk_size_gb      = 128
   vnet_subnet_id       = var.aks_subnet_id
-  node_count           = 2
+  node_count           = 1
   node_labels = {
     "mode" = "system"
   }
