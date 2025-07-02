@@ -62,7 +62,7 @@ resource "azurerm_kubernetes_cluster_node_pool" "user_nodepool" {
   min_count             = 1
   max_count             = 3      
   node_labels = {
-    kubernetes.io/workload = "app"
+    "kubernetes.io/workload" = "app"
   }
 
   node_taints = [
