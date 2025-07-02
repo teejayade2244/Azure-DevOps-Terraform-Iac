@@ -112,14 +112,14 @@ resource "azurerm_application_gateway" "web_app_gateway" {
   }
 
   probe {
-    name                                      = "health-probe"
-    protocol                                  = "Http"
-    path                                      = "/"
-    interval                                  = 30
-    timeout                                   = 30
-    unhealthy_threshold                       = 3
-    port                                      = 80
-    pick_host_name_from_backend_http_settings = true
+    name                = "health-probe"
+    protocol            = "Http"
+    path                = "/"
+    interval            = 30
+    timeout             = 30
+    unhealthy_threshold = 3
+    port                = 80
+    host                = "10.0.1.11"  # Use the backend IP as host for testing
   }
 
   backend_http_settings {
