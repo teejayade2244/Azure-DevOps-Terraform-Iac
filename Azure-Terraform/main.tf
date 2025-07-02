@@ -101,7 +101,7 @@ resource "azurerm_private_dns_a_record" "argocd_ui_a_record" {
 
 resource "azurerm_application_gateway" "web_app_gateway" {
   name                = "${local.resource_name_prefix}-app-gateway"
-  resource_group_name = module.resource_group.name
+  resource_group_name = module.resource_resource_group.name
   location            = module.resource_group.location
   tags                = local.common_tags # Ensure tags are included as per your original code
 
@@ -111,9 +111,9 @@ resource "azurerm_application_gateway" "web_app_gateway" {
   # This is NOT a best practice for new production deployments, as V1 is deprecated.
   # You should investigate why WAF_v2 is not working with private IPs in your subscription.
   sku {
-    name     = "WAF"    # Changed to WAF (V1)
-    tier     = "WAF"    # Changed to WAF (V1)
-    capacity = 2        # Capacity is still applicable
+    name     = "WAF_Medium" # Changed to a specific V1 WAF size as required by the error
+    tier     = "WAF"        # Tier stays as "WAF" (V1)
+    capacity = 2            # Capacity is still applicable
   }
 
   gateway_ip_configuration {
