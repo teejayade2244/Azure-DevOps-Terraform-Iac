@@ -78,13 +78,25 @@ resource "azurerm_subnet" "app_gateway_subnet" {
   address_prefixes     = ["10.0.3.0/24"]
 }
 
-resource "azurerm_public_ip" "app_gateway_public_ip" {
-  name                = "${local.resource_name_prefix}-app-gateway-pip"
-  resource_group_name = module.resource_group.name
-  location            = module.resource_group.location
-  allocation_method   = "Static"
-  sku                 = "Standard"
-  tags                = local.common_tags
+resource "azurerm_private_dns_zone" "internal_aks_zone" {
+  name                = "aks.internal"
+  resource_group_name  = module.resource_group.name
+}
+
+resource "azurerm_private_dns_zone_virtual_network_link" "aks_vnet_link" {
+  name                  = "link-aks-vnet-to-internal-dns"
+  resource_group_name   =  module.resource_group.name
+  private_dns_zone_name = azurerm_private_dns_zone.internal_aks_zone.name
+  virtual_network_id    = module.vnet.vnet_id
+  registration_enabled  = false 
+}
+
+resource "azurerm_private_dns_a_record" "argocd_ui_a_record" {
+  name                = "argocd" 
+  zone_name           = azurerm_private_dns_zone.internal_aks_zone.name
+  resource_group_name =  module.resource_group.name
+  ttl                 = 300 
+  records             = [azurerm_application_gateway.web_app_gateway.frontend_ip_configuration[0].private_ip_address]
 }
 
 resource "azurerm_application_gateway" "web_app_gateway" {
@@ -92,21 +104,16 @@ resource "azurerm_application_gateway" "web_app_gateway" {
   resource_group_name = module.resource_group.name
   location            = module.resource_group.location
   tags                = local.common_tags
-
   sku {
     name     = "WAF_v2"
     tier     = "WAF_v2"
-    capacity = 2
+    capacity = 2 # Minimum capacity for production, adjust based on traffic.
   }
 
+  # Gateway IP Configuration
   gateway_ip_configuration {
     name      = "appgateway-ip-config"
     subnet_id = azurerm_subnet.app_gateway_subnet.id
-  }
-
-  frontend_ip_configuration {
-    name                 = "frontend-public-ip"
-    public_ip_address_id = azurerm_public_ip.app_gateway_public_ip.id
   }
 
   frontend_ip_configuration {
@@ -116,57 +123,57 @@ resource "azurerm_application_gateway" "web_app_gateway" {
   }
 
   frontend_port {
-    name = "http-port"
-    port = 80
+    name = "http-port" # Changed name to reflect HTTP
+    port = 80           # Changed to HTTP port
   }
 
   backend_address_pool {
     name         = "argocd-backend-pool"
-    ip_addresses = ["10.0.1.11"]  # NGINX internal LoadBalancer IP
+    ip_addresses = ["10.0.1.11"] # NGINX internal LoadBalancer IP
   }
 
   probe {
     name                = "health-probe"
-    protocol            = "Http"
-    path                = "/"
+    protocol            = "Http" # Probe NGINX Ingress Controller on HTTP
+    path                = "/healthz" # Common NGINX Ingress health check path, or adjust if your NGINX has a specific one
     interval            = 30
     timeout             = 30
     unhealthy_threshold = 3
-    port                = 80
-    host                = "10.0.1.11"  # Use the backend IP as host for testing
+    port                = 80 # Probe NGINX Ingress Controller on its HTTP port
   }
 
   backend_http_settings {
     name                  = "argocd-http-settings"
-    port                  = 80
-    protocol              = "Http"
+    port                  = 80 # App Gateway sends HTTP to NGINX Ingress Controller
+    protocol              = "Http" # App Gateway sends HTTP to NGINX Ingress Controller
     cookie_based_affinity = "Disabled"
     request_timeout       = 60
     probe_name            = "health-probe"
   }
 
   http_listener {
-    name                           = "argocd-http-listener"
-    frontend_ip_configuration_name = "frontend-public-ip"
-    frontend_port_name             = "http-port"
-    protocol                       = "Http"
+    name                           = "argocd-http-listener" # Changed name to reflect HTTP
+    frontend_ip_configuration_name = "frontend-private-ip"
+    frontend_port_name             = "http-port"            # Use the HTTP port
+    protocol                       = "Http"                 # Listen for HTTP
+    host_names                     = ["argocd.aks.internal"] # Use the internal hostname
   }
 
   request_routing_rule {
     name                       = "argocd-routing-rule"
     rule_type                  = "Basic"
-    http_listener_name         = "argocd-http-listener"
+    http_listener_name         = "argocd-http-listener" # Use the HTTP listener
     backend_address_pool_name  = "argocd-backend-pool"
     backend_http_settings_name = "argocd-http-settings"
-    priority                   = 100
   }
 
+  # Web Application Firewall Configuration (No changes, remains good practice)
   waf_configuration {
-    enabled                  = true
-    firewall_mode            = "Prevention"
-    rule_set_type            = "OWASP"
-    rule_set_version         = "3.2"
-    file_upload_limit_mb     = 100
+    enabled            = true
+    firewall_mode      = "Prevention"
+    rule_set_type      = "OWASP"
+    rule_set_version   = "3.2"
+    file_upload_limit_mb = 100
     max_request_body_size_kb = 128
   }
 }
