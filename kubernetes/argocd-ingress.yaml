@@ -6,7 +6,8 @@ metadata:
 spec:
     ingressClassName: nginx
     rules:
-        - http:
+        - host: argocd.internal 
+          http:
               paths:
                   - path: /
                     pathType: Prefix
@@ -14,4 +15,4 @@ spec:
                         service:
                             name: argocd-server
                             port:
-                                number: 8080
+                                number: 8080 # Argo CD UI's default HTTP port
