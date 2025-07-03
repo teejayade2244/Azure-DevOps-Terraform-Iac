@@ -33,6 +33,7 @@ module "acr" {
   location            = module.resource_group.location
   resource_group_name = module.resource_group.name
   common_tags         = var.common_tags
+  
 }
 
 module "aks" {
