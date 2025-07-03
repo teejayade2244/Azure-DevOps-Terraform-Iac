@@ -1,0 +1,409 @@
+variables:
+  - group: MyProject-Env-Dev
+  - name: PR_SOURCE_BRANCH_NAME
+    value: '$(System.PullRequest.SourceBranch)'
+  - name: NEW_IMAGE_TAG
+    value: '$(Build.BuildId)'
+  - name: GITHUB_REPO
+    value: 'teejayade2244/Azure-DevOps-Terraform-Iac'
+
+trigger:
+  branches:
+    include:
+      - master 
+      - feature/* 
+pr:
+  branches:
+    include:
+      - "*" 
+resources:
+  repositories:
+  - repository: GitOpsRepo 
+    type: github
+    name: teejayade2244/Azure-DevOps-Terraform-Iac 
+    ref: master 
+    endpoint: github.com_teejayade2244 
+
+pool:
+  name: MyLinuxAgents 
+
+stages:
+- stage: BuildAndTest
+  displayName: 'Build and Test Frontend'
+  jobs:
+  - job: FrontendCI
+    displayName: 'Frontend Continuous Integration (Build, Unit Tests and Dependency scans)'
+    pool:
+      name: MyLinuxAgents
+    steps:
+    - task: Bash@3 
+      displayName: 'Clean node_modules and package-lock.json for PRs'
+      inputs:
+        targetType: 'inline'
+        script: |
+          # Azure DevOps built-in variables for branch name:
+          # Build.SourceBranch (e.g., refs/heads/master, refs/pull/123/merge)
+          # Build.SourceBranchName (e.g., master, pull/123/merge)
+          # System.PullRequest.PullRequestNumber (if it's a PR build)
+          
+          # Check if it's a PR build by looking for System.PullRequest.PullRequestNumber
+          # Or, check if the branch name contains 'pull/'
+          if [[ "$(Build.SourceBranch)" == refs/pull/* ]]; then
+            echo "This is a PR branch. Cleaning workspace before npm install."
+            rm -rf node_modules package-lock.json || true
+          else
+            echo "Not a PR branch. Skipping pre-install cleanup."
+          fi
+        workingDirectory: '$(Build.SourcesDirectory)' 
+
+    # Using Node.js Tool Installer task for specific Node.js version
+    # ────── Setup and Install ──────
+    - task: NodeTool@0
+      displayName: 'Use Node.js 22.x' 
+      inputs:
+        versionSpec: '22.x' 
+
+    - script: npm install --no-audit
+      displayName: 'Install Node.js Dependencies'
+      workingDirectory: '$(Build.SourcesDirectory)'
+
+    - script: |
+        echo "Running NPM Audit..."
+        npm audit --audit-level=critical
+      displayName: 'Run NPM Audit'
+      workingDirectory: '$(Build.SourcesDirectory)'
+
+    # ────── OWASP Dependency Check ──────
+    # - bash: 'mkdir -p OWASP-security-reports'
+    #   displayName: 'Create OWASP Security Reports Directory'
+    #   workingDirectory: '$(Build.SourcesDirectory)'
+    
+    # - task: dependency-check-build-task@6
+    #   displayName: 'Run OWASP Dependency Check'
+    #   inputs:
+    #     projectName: 'core-serve-frontend-app'
+    #     scanPath: '$(Build.SourcesDirectory)'
+    #     format: 'HTML'
+    #     uploadReports: true
+    #     failOnCVSS: '8'
+    #     enableVerbose: true
+    #     nvdApiKey: '$(NVD_API_KEY)' 
+
+    # - task: PublishBuildArtifacts@1
+    #   displayName: 'Publish OWASP Reports'
+    #   inputs:
+    #     pathToPublish: '$(Build.SourcesDirectory)/OWASP-security-reports'
+    #     artifactName: 'OWASPReports'
+
+    # Create a directory for test results
+    # ────── Unit Tests ──────
+    - bash: 'mkdir -p test-results'
+      displayName: 'Create Test Results Directory'
+      workingDirectory: '$(Build.SourcesDirectory)'
+
+    - script: npm test
+      displayName: 'Run Unit Tests'
+      workingDirectory: '$(Build.SourcesDirectory)'
+
+    # Publish test results (assuming 'npm test' generates a JUnit-compatible report)
+    - task: PublishTestResults@2
+      displayName: 'Publish Unit Test Results'
+      inputs:
+        testResultsFormat: 'JUnit' 
+        testResultsFiles: '**/junit.xml' 
+        mergeResults: true
+        failTaskOnFailedTests: true
+
+
+- stage: SonarQubeAnalysis
+  displayName: 'Static Analysis with SonarQube'
+  jobs:
+  - job: SonarScan
+    displayName: 'Run SonarQube Scan'
+    pool:
+      name: MyLinuxAgents
+    steps:
+    - task: SonarQubePrepare@6
+      displayName: 'Prepare SonarQube Analysis'
+      condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest')) # <--- ADD THIS LINE
+      inputs:
+          SonarQube: 'sonarqube'
+          scannerMode: 'CLI'
+          configMode: 'manual'
+          cliProjectKey: $(SONARQUBE_PROJECT_KEY)
+          cliProjectName: 'temitope'
+          extraProperties: |
+              sonar.sources=src
+              sonar.exclusions=**/node_modules/**,**/bin/**,**/obj/**
+            
+    - task: SonarQubeAnalyze@6
+      displayName: 'Run SonarQube Analysis'
+      condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest')) 
+      
+    - task: SonarQubePublish@6
+      displayName: 'Publish SonarQube Results and Wait for Quality Gate'
+      inputs:
+        pollingTimeoutSec: '300' 
+      condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest')) # This ensures the SonarQube publish step runs only for non-PR builds
+     
+    - task: SonarQubePublish@6
+      displayName: 'Publish SonarQube Results and Wait for Quality Gate'
+      inputs:
+        pollingTimeoutSec: '300' 
+      condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest')) # This ensures the SonarQube publish step runs only for non-PR builds
+
+
+- stage: BuildAndScanDockerImage
+  displayName: 'Build & Scan Docker Image'
+  jobs:
+  - job: DockerImageOps
+    displayName: 'Docker Image Build & Trivy Scan'
+    pool:
+      name: MyLinuxAgents
+    variables:
+      IMAGE_TAG: '$(Build.BuildId)' 
+      DOCKER_IMAGE_FULL_NAME: '$(ACR_REGISTRY_SERVER)/$(ACR_REPOSITORY_NAME):$(IMAGE_TAG)'
+    steps:
+    # Login to Azure Container Registry (ACR)
+    - task: Docker@2
+      displayName: 'Login to ACR'
+      inputs:
+        containerRegistry: 'my-acr-connection' 
+        command: 'login'
+
+    # Build and Tag Docker Image
+    - task: Docker@2
+      displayName: 'Build and Tag Docker Image for ACR'
+      inputs:
+        containerRegistry: 'my-acr-connection' 
+        repository: '$(ACR_REPOSITORY_NAME)' 
+        command: 'build'
+        Dockerfile: 'Dockerfile' 
+        tags: '$(IMAGE_TAG)' 
+        buildContext: '$(Build.SourcesDirectory)' 
+
+    # Trivy Vulnerability Scan
+    - bash: 'mkdir -p Trivy-Image-Reports'
+      displayName: 'Create Trivy Reports Directory'
+      workingDirectory: '$(Build.SourcesDirectory)'
+
+    - script: |
+        echo "Running Trivy Scan for MEDIUM severity..."
+        trivy image $(DOCKER_IMAGE_FULL_NAME) \
+          --severity LOW,MEDIUM \
+          --exit-code 0 \
+          --quiet \
+          --format json -o Trivy-Image-Reports/trivy-image-MEDIUM-results.json
+
+        echo "Running Trivy Scan for CRITICAL severity..."
+        trivy image $(DOCKER_IMAGE_FULL_NAME) \
+          --severity CRITICAL \
+          --exit-code 1 \
+          --quiet \
+          --format json -o Trivy-Image-Reports/trivy-image-CRITICAL-results.json
+      displayName: 'Run Trivy Vulnerability Scan'
+      workingDirectory: '$(Build.SourcesDirectory)'
+
+    # Convert Trivy reports to HTML and XML
+    # IMPORTANT: Ensure Trivy templates (html.tpl, junit.tpl) are present on your agent at `/usr/local/share/trivy/templates/`.
+    - script: |
+        echo "Converting Trivy JSON reports to HTML and XML..."
+        trivy convert \
+          --format template --template "@/usr/local/share/trivy/templates/html.tpl" \
+          --output Trivy-Image-Reports/trivy-image-MEDIUM-results.html Trivy-Image-Reports/trivy-image-MEDIUM-results.json
+
+        trivy convert \
+          --format template --template "@/usr/local/share/trivy/templates/html.tpl" \
+          --output Trivy-Image-Reports/trivy-image-CRITICAL-results.html Trivy-Image-Reports/trivy-image-CRITICAL-results.json
+
+        trivy convert \
+          --format template --template "@/usr/local/share/trivy/templates/junit.tpl" \
+          --output Trivy-Image-Reports/trivy-image-MEDIUM-results.xml Trivy-Image-Reports/trivy-image-MEDIUM-results.json
+
+        trivy convert \
+          --format template --template "@/usr/local/share/trivy/templates/junit.tpl" \
+          --output Trivy-Image-Reports/trivy-image-CRITICAL-results.xml Trivy-Image-Reports/trivy-image-CRITICAL-results.json
+      displayName: 'Convert Trivy Reports'
+      workingDirectory: '$(Build.SourcesDirectory)'
+
+    # Publish Trivy reports as build artifacts
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish Trivy Reports'
+      inputs:
+        pathToPublish: '$(Build.SourcesDirectory)/Trivy-Image-Reports'
+        artifactName: 'TrivyReports'
+
+    # Push Docker Image to ACR
+    - task: Docker@2
+      displayName: 'Push Docker Image to ACR'
+      inputs:
+        containerRegistry: 'my-acr-connection' 
+        repository: '$(ACR_REPOSITORY_NAME)' 
+        command: 'push'
+        tags: '$(IMAGE_TAG)'
+
+    # Publish Docker Image as a build artifact
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish Docker Image Artifact'
+      inputs:
+        pathToPublish: '$(Build.SourcesDirectory)/Dockerfile' 
+        artifactName: 'DockerImageArtifact'
+
+- stage: K8SImageUpdateStaging
+  displayName: 'K8S Image Update'
+  dependsOn: BuildAndScanDockerImage
+  condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'))
+  jobs:
+  - job: UpdateK8SManifest
+    displayName: 'Update K8S Manifest in GitOps Repo'
+    pool:
+      name: MyLinuxAgents
+    
+    steps:      
+    - bash: |
+        echo "##[group]Variable Verification"
+        echo "ACR_REGISTRY_SERVER: $(ACR_REGISTRY_SERVER)"
+        echo "ACR_REPOSITORY_NAME: $(ACR_REPOSITORY_NAME)"
+        echo "NEW_IMAGE_TAG: $(NEW_IMAGE_TAG)"
+        echo "##[endgroup]"
+      displayName: 'Verify All Required Variables'
+
+    # Clean the GitOps repository directory to ensure no stale files remain
+    - bash: |
+        rm -rf "$(Agent.BuildDirectory)/s/kubernetes" || true
+      displayName: 'Clean GitOps Repo Directory'
+
+    - checkout: GitOpsRepo
+      displayName: 'Checkout GitOps Repository'
+
+    # Update the Kubernetes manifest with the new image tag
+    # This step updates the deployment.yaml file with the new image tag
+    - bash: |
+        set -e
+        cd "$(Agent.BuildDirectory)/s/kubernetes"
+        
+        FULL_ACR_IMAGE="$(ACR_REGISTRY_SERVER)/$(ACR_REPOSITORY_NAME):$(NEW_IMAGE_TAG)"
+        
+        git config user.email "temitope224468@gmail.com"
+        git config user.name "Azure DevOps Pipeline"
+        
+        BRANCH_NAME=$(echo "$(System.PullRequest.SourceBranch)" | sed 's/refs\/heads\///')
+        TARGET_BRANCH="feature-${BRANCH_NAME}-$(NEW_IMAGE_TAG)"
+        echo "Target branch: ${TARGET_BRANCH}"
+        
+        # Branch management
+        git checkout -b "${TARGET_BRANCH}" 2>/dev/null || git checkout "${TARGET_BRANCH}"
+        
+        echo "Current image in deployment.yaml:"
+        grep 'image:' deployment.yaml
+
+        # Update the image tag in deployment.yaml
+        sed -i "s|image: .*|image: ${FULL_ACR_IMAGE}|" deployment.yaml
+        echo "Updated deployment.yaml:"
+        cat deployment.yaml
+        
+        # Commit and push
+        git add deployment.yaml
+        git commit -m  "Azure DevOps Pipeline: Updated image tag to ${NEW_IMAGE_TAG} for PR $(System.PullRequest.PullRequestId)"
+        git push https://$(GITHUB_PAT_FOR_GITOPS)@github.com/$(GITHUB_REPO).git "${TARGET_BRANCH}"
+      displayName: 'Update Kubernetes Manifest'
+      env:
+        GITHUB_PAT_FOR_GITOPS: $(GITHUB_PAT_FOR_GITOPS)
+
+
+- stage: GitHubRaisePR
+  displayName: 'GitHub - Raise PR'
+  dependsOn: K8SImageUpdateStaging 
+  condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest')) 
+  jobs:
+  - job: CreatePullRequest
+    displayName: 'Create PR in GitOps Repo'
+    pool:
+      name: MyLinuxAgents 
+    steps:
+    - bash: |
+        PR_TITLE="Updated Docker Image to $(NEW_IMAGE_TAG)"
+        PR_BODY="Updated Docker Image in deployment manifest for build $(Build.BuildId)"
+        ORIGINAL_SOURCE_BRANCH_NAME=$(echo "$(PR_SOURCE_BRANCH_NAME)" | sed 's/refs\/heads\///')
+        PR_HEAD_BRANCH="feature-${ORIGINAL_SOURCE_BRANCH_NAME}-$(NEW_IMAGE_TAG)"
+        PR_BASE_BRANCH="master" 
+        curl -X POST https://api.github.com/repos/$(GITHUB_REPO)/pulls \
+        -H "Authorization: Bearer $(GITHUB_PAT_FOR_GITOPS)" \
+        -H "Accept: application/vnd.github.v3+json" \
+        -H "Content-Type: application/json" \
+        -d '{
+            "title": "'"${PR_TITLE}"'",
+            "body": "'"${PR_BODY}"'",
+            "head": "'"${PR_HEAD_BRANCH}"'",
+            "base": "'"${PR_BASE_BRANCH}"'",
+            "assignees": ["teejayade2244"]
+        }'
+      displayName: 'Create GitHub Pull Request'
+
+
+- stage: ManualApproval
+  displayName: 'Manual Approval for Deployment'
+  dependsOn: GitHubRaisePR
+  condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'))
+  jobs:
+  - job: ApprovePR
+    displayName: 'Await Manual PR Approval'
+    pool:
+      name: server
+    steps:
+    - task: ManualValidation@0
+      displayName: 'Approve PR for Master Branch Merge'
+      inputs:
+        instructions: 'The Kubernetes manifest has been updated and a Pull Request has been created in the GitOps repository. Please review and merge the PR on GitHub to proceed with the deployment. Once merged, approve this step to allow the pipeline to complete.'
+        timeoutInMinutes: 2880
+
+
+
+- stage: DAST_Scan
+  displayName: 'Dynamic Application Security Testing (DAST)'
+  dependsOn: ManualApproval 
+  condition: and(succeeded(), eq(variables['Build.SourceBranchName'], 'master'))
+  
+  jobs:
+  - job: OWASP_ZAP_Scan
+    displayName: 'OWASP ZAP Full Scan'
+    pool:
+      name: MyLinuxAgents
+    
+    variables:
+      ZAP_VERSION: 'stable'
+      ARTIFACT_NAME: 'DAST_Reports_$(Build.BuildNumber)'
+    
+    steps:
+    - bash: |
+        mkdir -p $(Pipeline.Workspace)/ZAP-reports
+        docker pull ghcr.io/zaproxy/zaproxy:$(ZAP_VERSION)
+      displayName: 'Prepare ZAP Environment'
+    
+    - bash: |
+        docker run --rm \
+          -v $(Pipeline.Workspace)/ZAP-reports:/zap/wrk/:rw \
+          -e ZAP_JVM_OPTIONS="-Xmx4g" \
+          ghcr.io/zaproxy/zaproxy:$(ZAP_VERSION) \
+          zap-full-scan.py \
+          -t $(SCAN_TARGET) \
+          -g gen.conf \
+          -I \
+          -r DAST-report.html \
+          -J DAST-report.json \
+          -x DAST-report.xml \
+          --hook=/zap/auth_hook.py \
+          -d
+      displayName: 'Execute ZAP Full Scan'
+      continueOnError: false  
+      timeoutInMinutes: 120  
+    
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish DAST Reports'
+      inputs:
+        PathtoPublish: '$(Pipeline.Workspace)/ZAP-reports'
+        ArtifactName: '$(ARTIFACT_NAME)'
+        publishLocation: 'Container'
+
+
+
