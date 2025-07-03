@@ -14,6 +14,8 @@ spec:
       labels:
         app: frontend-app
     spec:
+      imagePullSecrets:
+      - name: acr-credentials
       containers:
       - name: frontend-app
         image: demoacr423432.azurecr.io/demoacr423432:126
