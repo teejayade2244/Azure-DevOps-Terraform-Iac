@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: frontend-app
-        image: demotesting2332.azurecr.io/demotesting2332:119
+        image: demoacr423432.azurecr.io/demoacr423432:120
         ports:
         - containerPort: 3000
 
