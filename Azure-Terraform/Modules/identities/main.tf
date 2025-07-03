@@ -15,14 +15,14 @@ resource "azurerm_role_assignment" "aks_identity_rg_contributor" {
   principal_id         = azurerm_user_assigned_identity.aks_identity.principal_id
 }
 
-
 # Assign the User Assigned Identity the AcrPull role on the resource group
 # This allows the AKS cluster to pull images from the Azure Container Registry (ACR)
 resource "azurerm_role_assignment" "aks_identity_acr_pull" {
-  scope                = var.resource_group_id
+  scope                = var.acr_id
   role_definition_name = "AcrPull"
   principal_id         = azurerm_user_assigned_identity.aks_identity.principal_id
 }
+
 
 # Get the node resource group data
 data "azurerm_resource_group" "aks_node_rg" {

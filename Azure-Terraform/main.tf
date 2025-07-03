@@ -23,6 +23,7 @@ module "identity" {
   resource_group_name = module.resource_group.name
   resource_group_id   = module.resource_group.id  
   location            = module.resource_group.location
+  acr_id              = module.acr.acr_id
   common_tags         = var.common_tags
 }
 

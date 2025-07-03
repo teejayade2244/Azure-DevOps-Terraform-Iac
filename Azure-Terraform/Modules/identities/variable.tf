@@ -23,5 +23,9 @@ variable "aks_identity_name" {
   type        = string
 }
 
-
+variable "acr_id" {
+  description = "The resource ID of the Azure Container Registry (ACR) to which the AKS identity will be granted access."
+  type        = string
+  
+}
 
